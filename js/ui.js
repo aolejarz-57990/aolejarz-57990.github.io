@@ -1,10 +1,10 @@
+// js/ui.js
 import { fmtDate, unique } from './utils.js';
 
 const qs  = sel => document.querySelector(sel);
-const qsa = sel => Array.from(document.querySelectorAll(sel));
 const byId = id => document.getElementById(id);
 
-// Dom refs
+// --- referencje do DOM ---
 const refs = {
   backlog:    byId('backlog'),
   search:     byId('search'),
@@ -43,13 +43,14 @@ const refs = {
   }
 };
 
-let _stateAccess = () => ({ tasks: [], sprint: { }, standups: {} });
+let _stateAccess = () => ({ tasks: [], sprint: {}, standups: {} });
 let _editingId = null;
 
 function dispatch(name, detail) {
   document.dispatchEvent(new CustomEvent(name, { detail }));
 }
 
+// --- filtrowanie backlogu ---
 function matchesFilters(task) {
   const q  = refs.search.value.trim().toLowerCase();
   const fa = refs.assignee.value;
@@ -61,6 +62,7 @@ function matchesFilters(task) {
   return qOk && aOk && tOk;
 }
 
+// --- karta zadania ---
 function taskCard(task, { draggable=false, showMove=false } = {}) {
   const el = document.createElement('div');
   el.className = 'task';
@@ -81,14 +83,14 @@ function taskCard(task, { draggable=false, showMove=false } = {}) {
     </div>
   `;
 
-  // drag
+  // drag & drop
   el.addEventListener('dragstart', e => {
     el.classList.add('dragging');
     e.dataTransfer.setData('text/plain', task.id);
   });
   el.addEventListener('dragend', () => el.classList.remove('dragging'));
 
-  // actions
+  // akcje przycisków
   el.addEventListener('click', (e)=>{
     const act = e.target?.dataset?.act;
     if (!act) return;
@@ -100,6 +102,7 @@ function taskCard(task, { draggable=false, showMove=false } = {}) {
   return el;
 }
 
+// --- render backlogu i filtrów ---
 function renderFilters(tasks) {
   const assignees = unique(tasks.map(t=>t.assignee));
   refs.assignee.innerHTML = '<option value="">— Wszyscy —</option>' + assignees.map(a=>`<option>${a}</option>`).join('');
@@ -114,8 +117,8 @@ function renderBacklog(state) {
   for (const t of items) refs.backlog.appendChild(taskCard(t, { showMove:true }));
 }
 
+// --- render tablicy sprintu ---
 function renderBoard(state) {
-  // clear
   Object.values(refs.columns).forEach(dz => dz.innerHTML = '');
   const inSprint = state.tasks.filter(t=>t.inSprint);
   const byStatus = s => inSprint.filter(t=> (t.status||'todo')===s).filter(matchesFilters);
@@ -123,12 +126,11 @@ function renderBoard(state) {
   for (const s of order) {
     const list = byStatus(s);
     refs.counts[s].textContent = `${list.length} zadań`;
-    for (const t of list) {
-      refs.columns[s].appendChild(taskCard(t, { draggable:true }));
-    }
+    for (const t of list) refs.columns[s].appendChild(taskCard(t, { draggable:true }));
   }
 }
 
+// --- sprint badge ---
 function renderSprintBadge(state) {
   const s = state.sprint;
   if (!s.start || !s.end) {
@@ -141,6 +143,7 @@ function renderSprintBadge(state) {
   refs.buttons.startStop.textContent = s.started? '⏸ Zatrzymaj sprint' : '▶️ Start sprintu';
 }
 
+// --- burndown ---
 function drawBurndown(state) {
   const canvas = refs.burndown;
   const ctx = canvas.getContext('2d');
@@ -155,7 +158,6 @@ function drawBurndown(state) {
     return;
   }
 
-  // X axis days
   const s = new Date(start); s.setHours(0,0,0,0);
   const e = new Date(end);   e.setHours(0,0,0,0);
   const days = [];
@@ -172,7 +174,6 @@ function drawBurndown(state) {
     actual.push(lastVal);
   }
 
-  // axes
   const pad=40, x0=pad, y0=h-pad, x1=w-pad, y1=pad;
   ctx.strokeStyle="#2a2f5a"; ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(x0,y1); ctx.lineTo(x0,y0); ctx.lineTo(x1,y0); ctx.stroke();
@@ -181,22 +182,20 @@ function drawBurndown(state) {
   const x = i => x0 + (i/(days.length-1||1))*(x1-x0);
   const y = v => y0 - (v/(maxY||1))*(y0-y1);
 
-  // ideal (dashed)
   ctx.beginPath(); ctx.moveTo(x(0), y(ideal[0]||0));
   for (let i=1;i<ideal.length;i++) ctx.lineTo(x(i), y(ideal[i]));
   ctx.setLineDash([8*devicePixelRatio,6*devicePixelRatio]); ctx.strokeStyle="#6b8afd"; ctx.lineWidth=2; ctx.stroke(); ctx.setLineDash([]);
 
-  // actual
   ctx.beginPath(); ctx.moveTo(x(0), y(actual[0]||0));
   for (let i=1;i<actual.length;i++) ctx.lineTo(x(i), y(actual[i]));
   ctx.strokeStyle="#34d399"; ctx.lineWidth=3; ctx.stroke();
 
-  // labels
   ctx.fillStyle="#9aa3d9"; ctx.font = `${12*devicePixelRatio}px system-ui`;
   ctx.fillText("Story Points", 4, y1-8);
   ctx.fillText("Dni", x1-20*devicePixelRatio, y0+16*devicePixelRatio);
 }
 
+// --- stand-up ---
 function renderStandups(state) {
   const today = new Date(); today.setHours(0,0,0,0);
   const key = today.toISOString().slice(0,10);
@@ -211,12 +210,11 @@ function renderStandups(state) {
   `).join('') || `<div class="muted">Brak notatek na dziś.</div>`;
 }
 
+// --- obsługa UI ---
 function wireStaticListeners() {
-  // Filters
   [refs.search, refs.assignee, refs.tag].forEach(el =>
     el.addEventListener('input', () => dispatch('ui:filters-changed')));
 
-  // Buttons
   refs.buttons.newTask.addEventListener('click', () => openTaskDialog());
   refs.buttons.planSprint.addEventListener('click', () => openSprintDialog());
   refs.buttons.startStop.addEventListener('click', () => dispatch('ui:sprint-toggle'));
@@ -234,7 +232,6 @@ function wireStaticListeners() {
     input.click();
   });
 
-  // Drag & drop columns
   Object.values(refs.columns).forEach(dz => {
     dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('over'); });
     dz.addEventListener('dragleave', ()=> dz.classList.remove('over'));
@@ -245,9 +242,8 @@ function wireStaticListeners() {
     });
   });
 
-  // Forms
-  refs.forms.task.addEventListener('close', ()=>{
-    if (refs.forms.task.returnValue !== 'save') return;
+  refs.dialogs.task.addEventListener('close', ()=>{
+    if (refs.dialogs.task.returnValue !== 'save') return;
     const payload = {
       title: byId('tTitle').value.trim(),
       desc: byId('tDesc').value.trim(),
@@ -260,8 +256,17 @@ function wireStaticListeners() {
     } else {
       dispatch('ui:task-create', payload);
     }
-    refs.dialogs.task.close();
     _editingId = null;
+  });
+
+  refs.dialogs.sprint.addEventListener('close', ()=>{
+    if (refs.dialogs.sprint.returnValue !== 'save') return;
+    const data = {
+      name:  byId('sName').value.trim() || 'Sprint',
+      start: byId('sStart').value,
+      end:   byId('sEnd').value
+    };
+    dispatch('ui:sprint-set', data);
   });
 
   refs.forms.standup.addEventListener('submit', e=>{
@@ -275,17 +280,9 @@ function wireStaticListeners() {
     dispatch('ui:standup-add', item);
     refs.forms.standup.reset();
   });
-
-  refs.forms.sprint.addEventListener('close', ()=>{
-    if (refs.forms.sprint.returnValue !== 'save') return;
-    const data = { name: byId('sName').value.trim() || 'Sprint',
-                   start: byId('sStart').value,
-                   end: byId('sEnd').value };
-    dispatch('ui:sprint-set', data);
-    refs.dialogs.sprint.close();
-  });
 }
 
+// --- otwieranie dialogów ---
 export function openTaskDialog(task) {
   _editingId = task?.id || null;
   byId('taskDialogTitle').textContent = _editingId? 'Edytuj zadanie' : 'Nowe zadanie';
@@ -305,6 +302,7 @@ export function openSprintDialog() {
   refs.dialogs.sprint.showModal();
 }
 
+// --- API publiczne UI ---
 export function initUI(stateAccessor) {
   _stateAccess = stateAccessor;
   wireStaticListeners();
