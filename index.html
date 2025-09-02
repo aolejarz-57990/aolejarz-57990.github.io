@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Scrum Board – Modular</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">🌀 Scrum Board</div>
+    <div class="toolbar">
+      <button class="btn-primary" id="newTaskBtn">+ Nowe zadanie</button>
+      <button id="planSprintBtn">📆 Zaplanuj sprint</button>
+      <button id="startStopSprintBtn">▶️ Start sprintu</button>
+      <button id="exportBtn" class="btn-ghost">⤴︎ Export JSON</button>
+      <button id="importBtn" class="btn-ghost">⤵︎ Import JSON</button>
+      <span class="muted" id="sprintInfo"></span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- LEWA KOLUMNA -->
+    <aside class="card panel">
+      <h2>Backlog / Filtry</h2>
+      <div class="row">
+        <input id="search" placeholder="Szukaj po tytule, tagu, osobie…" />
+      </div>
+      <div class="row">
+        <select id="assigneeFilter">
+          <option value="">— Wszyscy —</option>
+        </select>
+        <select id="tagFilter">
+          <option value="">— Wszystkie tagi —</option>
+        </select>
+      </div>
+      <div id="backlog" class="backlog" aria-label="Backlog"></div>
+    </aside>
+
+    <!-- PRAWA KOLUMNA -->
+    <section class="kanban">
+      <div class="card panel grid two">
+        <div>
+          <h2>Burndown (Sprint)</h2>
+          <canvas id="burndown"></canvas>
+        </div>
+        <div>
+          <h2>Stand-up (Dziś)</h2>
+          <form id="standupForm" class="grid">
+            <input id="suWho" placeholder="Kto?" required />
+            <textarea id="suYesterday" placeholder="Wczoraj zrobiłem/am…" required></textarea>
+            <textarea id="suToday" placeholder="Dziś zrobię…" required></textarea>
+            <textarea id="suBlockers" placeholder="Blokery…"></textarea>
+            <button class="btn-primary" type="submit">Zapisz notatkę</button>
+          </form>
+          <div id="standupList"></div>
+        </div>
+      </div>
+
+      <div class="card panel">
+        <h2>Tablica Sprintu</h2>
+        <div class="columns">
+          <div class="column">
+            <div class="col-header">
+              <div>📝 To Do</div>
+              <div class="muted" id="count-todo"></div>
+            </div>
+            <div class="dropzone" data-status="todo"></div>
+          </div>
+
+          <div class="column">
+            <div class="col-header">
+              <div>⚙️ In Progress</div>
+              <div class="muted" id="count-inprogress"></div>
+            </div>
+            <div class="dropzone" data-status="inprogress"></div>
+          </div>
+
+          <div class="column">
+            <div class="col-header">
+              <div>🔍 Review</div>
+              <div class="muted" id="count-review"></div>
+            </div>
+            <div class="dropzone" data-status="review"></div>
+          </div>
+
+          <div class="column">
+            <div class="col-header">
+              <div>✅ Done</div>
+              <div class="muted" id="count-done"></div>
+            </div>
+            <div class="dropzone" data-status="done"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer muted">Dane zapisują się lokalnie w przeglądarce (LocalStorage). ✨</div>
+    </section>
+  </main>
+
+  <!-- MODALE -->
+  <dialog id="taskDialog">
+    <form method="dialog" id="taskForm" class="panel" style="min-width:360px;">
+      <h2 id="taskDialogTitle">Nowe zadanie</h2>
+      <label>Tytuł</label>
+      <input id="tTitle" required />
+      <label>Opis</label>
+      <textarea id="tDesc" rows="4"></textarea>
+      <div class="row">
+        <div class="grow">
+          <label>Story points</label>
+          <input id="tPoints" type="number" min="0" step="1" value="1" />
+        </div>
+        <div class="grow">
+          <label>Assignee</label>
+          <input id="tAssignee" placeholder="np. Ola" />
+        </div>
+      </div>
+      <label>Tagi (przecinki)</label>
+      <input id="tTags" placeholder="frontend, api" />
+      <menu style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px">
+        <button value="cancel">Anuluj</button>
+        <button class="btn-primary" value="save">Zapisz</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="sprintDialog">
+    <form method="dialog" id="sprintForm" class="panel" style="min-width:360px;">
+      <h2>Konfiguracja sprintu</h2>
+      <label>Nazwa sprintu</label>
+      <input id="sName" placeholder="Sprint 12" required />
+      <div class="row">
+        <div class="grow">
+          <label>Start</label>
+          <input id="sStart" type="date" required />
+        </div>
+        <div class="grow">
+          <label>Koniec</label>
+          <input id="sEnd" type="date" required />
+        </div>
+      </div>
+      <menu style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px">
+        <button value="cancel">Anuluj</button>
+        <button class="btn-primary" value="save">Zapisz</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/controller.js"></script>
+</body>
+</html>
